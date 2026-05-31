@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Search - Ad-Free Multi-Source Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    
+    header {
+      text-align: center;
+      padding: 60px 20px 40px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, transparent 100%);
+    }
+    h1 {
+      font-size: clamp(32px, 8vw, 56px);
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tagline {
+      color: #94a3b8;
+      font-size: 16px;
+      margin-bottom: 40px;
+      letter-spacing: 0.5px;
+    }
+
+    .search-container {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: rgba(30, 41, 59, 0.6);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      backdrop-filter: blur(10px);
+    }
+    input {
+      flex: 1;
+      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 2px solid rgba(100, 116, 139, 0.3);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #60a5fa;
+      background: rgba(15, 23, 42, 0.8);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+    input::placeholder { color: #64748b; }
+    
+    button {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+    button:active { transform: translateY(0); }
+
+    .results {
+      display: grid;
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .result {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-left: 4px solid #60a5fa;
+      padding: 24px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+    }
+    .result:hover {
+      background: rgba(30, 41, 59, 0.7);
+      border-color: rgba(96, 165, 250, 0.4);
+      transform: translateX(4px);
+    }
+    .result h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #f1f5f9;
+      line-height: 1.4;
+    }
+    .meta {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      background: rgba(96, 165, 250, 0.2);
+      color: #60a5fa;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+    .result p {
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .result a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .result a:hover {
+      color: #93c5fd;
+      gap: 10px;
+    }
+
+    .loading, .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+    .loading::after {
+      content: '';
+      animation: dots 1.4s infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    .info {
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 48px;
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .info strong { color: #93c5fd; }
+
+    @media (max-width: 640px) {
+      header { padding: 40px 20px 30px; }
+      .search-container { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Deep.Search</h1>
+      <p class="tagline">Independent • Ad-Free • Multi-Source</p>
+    </header>
+
+    <div class="search-container">
+      <input type="text" id="query" placeholder="Search Wikipedia, DuckDuckGo, ArXiv..." />
+      <button onclick="search()">Search</button>
+    </div>
+
+    <div id="results" class="results"></div>
+
+    <div class="info">
+      <strong>How it works:</strong> This search engine queries Wikipedia (knowledge base), DuckDuckGo (privacy-focused), and ArXiv (academic papers) simultaneously. No ads. No tracking. Pure search results.
+    </div>
+  </div>
+
+  <script>
+    const resultsDiv = document.getElementById('results');
+
+    async function search() {
+      const query = document.getElementById('query').value.trim();
+      if (!query) return;
+
+      resultsDiv.innerHTML = '<div class="loading">Searching</div>';
+      let results = [];
+
+      try {
+        // Wikipedia
+        try {
+          const wikiRes = await fetch(
+            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=3`
+          );
+          const wikiData = await wikiRes.json();
+          if (wikiData.query?.search) {
+            wikiData.query.search.forEach(item => {
+              results.push({
+                title: item.title,
+                desc: item.snippet.replace(/<\/?[^>]+>/g, ''),
+                url: `https://en.wikipedia.org/wiki/${item.title.replace(/ /g, '_')}`,
+                source: 'Wikipedia',
+                color: '#8b5cf6'
+              });
+            });
+          }
+        } catch (e) { }
+
+        // DuckDuckGo
+        try {
+          const ddgRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`);
+          const ddgData = await ddgRes.json();
+          if (ddgData.RelatedTopics) {
+            ddgData.RelatedTopics.slice(0, 3).forEach(item => {
+              if (item.FirstURL) {
+                results.push({
+                  title: item.Text || item.FirstURL,
+                  desc: item.Text || 'Web result',
+                  url: item.FirstURL,
+                  source: 'DuckDuckGo',
+                  color: '#f59e0b'
+                });
+              }
+            });
+          }
+        } catch (e) { }
+
+        // ArXiv
+        try {
+          const arxivRes = await fetch(
+            `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=2`
+          );
+          const arxivText = await arxivRes.text();
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(arxivText, 'text/xml');
+          xmlDoc.querySelectorAll('entry').forEach(entry => {
+            const title = entry.querySelector('title')?.textContent?.trim();
+            const summary = entry.querySelector('summary')?.textContent?.trim();
+            const id = entry.querySelector('id')?.textContent;
+            if (title) {
+              results.push({
+                title: title,
+                desc: (summary || '').substring(0, 120),
+                url: id?.replace('http://', 'https://') || '',
+                source: 'ArXiv',
+                color: '#60a5fa'
+              });
+            }
+          });
+        } catch (e) { }
+
+        if (results.length === 0) {
+          resultsDiv.innerHTML = '<div class="empty">No results found. Try a different search.</div>';
+          return;
+        }
+
+        resultsDiv.innerHTML = results.map(r => `
+          <div class="result">
+            <h3>${r.title}</h3>
+            <div class="meta">
+              <span class="badge" style="background: ${r.color}33; color: ${r.color}; border-color: ${r.color}66;">${r.source}</span>
+            </div>
+            <p>${r.desc}</p>
+            <a href="${r.url}" target="_blank">Read more →</a>
+          </div>
+        `).join('');
+      } catch (e) {
+        resultsDiv.innerHTML = '<div class="empty">Error performing search. Try again.</div>';
+      }
+    }
+
+    document.getElementById('query').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') search();
+    });
+  </script>
+</body>
+</html>
