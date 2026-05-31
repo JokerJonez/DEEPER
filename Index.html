@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep.Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header { padding: 40px 0; border-bottom: 1px solid #1e293b; }
+    h1 { font-size: 48px; margin-bottom: 10px; font-family: Georgia, serif; }
+    .subtitle { color: #94a3b8; font-size: 18px; }
+    .search-box { margin: 30px 0; display: flex; gap: 10px; }
+    input { 
+      flex: 1; padding: 15px; border: 2px solid #334155; 
+      background: #1e293b; color: #e2e8f0; border-radius: 8px; font-size: 16px;
+    }
+    button { 
+      padding: 15px 30px; background: #3b82f6; color: white; border: none; 
+      border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;
+    }
+    button:hover { background: #2563eb; }
+    .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-btn { 
+      padding: 8px 16px; border: 2px solid #334155; background: #1e293b; 
+      color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.3s;
+    }
+    .filter-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .results { margin-top: 30px; }
+    .result { 
+      background: #1e293b; border: 1px solid #334155; border-left: 4px solid #3b82f6;
+      padding: 20px; margin-bottom: 15px; border-radius: 8px;
+    }
+    .result h3 { margin-bottom: 10px; color: #e2e8f0; }
+    .result-meta { display: flex; gap: 10px; margin-bottom: 10px; font-size: 12px; }
+    .badge { color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; }
+    .result p { color: #cbd5e1; line-height: 1.6; margin-bottom: 10px; font-size: 14px; }
+    .result a { color: #3b82f6; text-decoration: none; font-weight: bold; }
+    .result a:hover { text-decoration: underline; }
+    .loading { text-align: center; color: #64748b; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Deep.Search</h1>
+      <p class="subtitle">Search academic papers, Wikipedia, and more — No ads!</p>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="query" placeholder="Search anything..." />
+      <button onclick="performSearch()">Search</button>
+    </div>
+
+    <div id="results" class="results"></div>
+  </div>
+
+  <script>
+    async function performSearch() {
+      const query = document.getElementById('query').value;
+      if (!query.trim()) return;
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+
+      let results = [];
+
+      try {
+        // Wikipedia
+        const wikiRes = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`
+        );
+        const wikiData = await wikiRes.json();
+        if (wikiData.query?.search) {
+          wikiData.query.search.slice(0, 3).forEach(item => {
+            results.push({
+              title: item.title,
+              source: 'Wikipedia',
+              url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
+              description: item.snippet.replace(/<\/?[^>]+>/g, ''),
+              color: '#8b5cf6'
+            });
+          });
+        }
+
+        // DuckDuckGo
+        const ddgRes = await fetch(
+          `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`
+        );
+        const ddgData = await ddgRes.json();
+        if (ddgData.RelatedTopics) {
+          ddgData.RelatedTopics.slice(0, 3).forEach(item => {
+            if (item.FirstURL) {
+              results.push({
+                title: item.Text || item.FirstURL,
+                source: 'DuckDuckGo',
+                url: item.FirstURL,
+                description: item.Text || 'Result',
+                color: '#f59e0b'
+              });
+            }
+          });
+        }
+
+        // ArXiv
+        const arxivRes = await fetch(
+          `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=2&sortBy=relevance`
+        );
+        const arxivText = await arxivRes.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(arxivText, 'text/xml');
+        xmlDoc.querySelectorAll('entry').forEach(entry => {
+          results.push({
+            title: entry.querySelector('title')?.textContent?.trim() || '',
+            source: 'ArXiv',
+            url: entry.querySelector('id')?.textContent?.replace('http://', 'https://') || '',
+            description: (entry.querySelector('summary')?.textContent?.trim() || '').substring(0, 100),
+            color: '#3b82f6'
+          });
+        });
+
+        // Display
+        if (results.length === 0) {
+          resultsDiv.innerHTML = '<div class="loading">No results found</div>';
+          return;
+        }
+
+        resultsDiv.innerHTML = results.map(r => `
+          <div class="result">
+            <h3>${r.title}</h3>
+            <div class="result-meta">
+              <span class="badge" style="background: ${r.color}">${r.source}</span>
+            </div>
+            <p>${r.description}</p>
+            <a href="${r.url}" target="_blank">View →</a>
+          </div>
+        `).join('');
+      } catch (e) {
+        resultsDiv.innerHTML = '<div class="loading">Error searching</div>';
+      }
+    }
+
+    document.getElementById('query').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performSearch();
+    });
+  </script>
+</body>
+</html>
